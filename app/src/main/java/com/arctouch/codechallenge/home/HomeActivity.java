@@ -1,51 +1,104 @@
 package com.arctouch.codechallenge.home;
 
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
+import android.content.Intent;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.ProgressBar;
 
 import com.arctouch.codechallenge.R;
-import com.arctouch.codechallenge.api.TmdbApi;
-import com.arctouch.codechallenge.base.BaseActivity;
-import com.arctouch.codechallenge.data.Cache;
-import com.arctouch.codechallenge.model.Genre;
+import com.arctouch.codechallenge.details.DetailsAtivity;
 import com.arctouch.codechallenge.model.Movie;
 
-import java.util.ArrayList;
+import java.util.List;
 
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.schedulers.Schedulers;
+import butterknife.BindView;
+import butterknife.ButterKnife;
 
-public class HomeActivity extends BaseActivity {
+public class HomeActivity extends AppCompatActivity {
 
-    private RecyclerView recyclerView;
-    private ProgressBar progressBar;
+    @BindView(R.id.recyclerView) RecyclerView recyclerView;
+    @BindView(R.id.progressBar) ProgressBar progressBar;
+    private HomeAdapter homeAdapter;
+    private  LinearLayoutManager layoutManager;
+    private HomeViewModel homeViewModel;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.home_activity);
+        ButterKnife.bind(this);
+        homeViewModel = ViewModelProviders.of(this).get(HomeViewModel.class);
+        homeViewModel.init();
+        homeViewModel.getMovies().observeForever(new Observer<List<Movie>>() {
+            @Override
+            public void onChanged(@Nullable List<Movie> movies) {
+                if(homeAdapter == null) {
+                    handleAdapter();
+                }else{
+                    homeAdapter.notifyDataSetChanged();
+                }
 
-        this.recyclerView = findViewById(R.id.recyclerView);
-        this.progressBar = findViewById(R.id.progressBar);
+            }
+        });
 
-        api.upcomingMovies(TmdbApi.API_KEY, TmdbApi.DEFAULT_LANGUAGE, 1L, TmdbApi.DEFAULT_REGION)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(response -> {
-                    for (Movie movie : response.results) {
-                        movie.genres = new ArrayList<>();
-                        for (Genre genre : Cache.getGenres()) {
-                            if (movie.genreIds.contains(genre.id)) {
-                                movie.genres.add(genre);
-                            }
-                        }
-                    }
 
-                    recyclerView.setAdapter(new HomeAdapter(response.results));
-                    progressBar.setVisibility(View.GONE);
-                });
+        homeViewModel.getPage().observe(this, page -> {
+            if(page != 1) {
+                homeViewModel.addNewMovies();
+            }
+        });
+
+
+
     }
+
+    private void handleAdapter(){
+        homeAdapter = new HomeAdapter( homeViewModel.getMovies().getValue());
+        layoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL,false);
+        recyclerView.setLayoutManager(layoutManager);
+        homeAdapter.setRVClick((view, position) -> callIntent(DetailsAtivity.class, homeAdapter.getItem(position).toJson()));
+        setScrollToRV();
+        recyclerView.setAdapter(homeAdapter);
+        progressBar.setVisibility(View.GONE);
+
+    }
+
+    private void setScrollToRV() {
+        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+            }
+
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+
+                if (!homeViewModel.isLoading().getValue()) {
+                    if (layoutManager != null && layoutManager.findLastCompletelyVisibleItemPosition() == homeAdapter.getItemCount() - 4) {
+                        //bottom of list!
+                        homeViewModel.addPage();
+
+                    }
+                }
+            }
+        });
+    }
+
+
+    private void callIntent(Class intentClass, String data){
+        Intent intent = new Intent();
+        intent.setClass(this, intentClass);
+        intent.putExtra("movie",data);
+        startActivity(intent);
+    }
+
+
 }

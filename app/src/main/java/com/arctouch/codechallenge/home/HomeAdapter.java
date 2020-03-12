@@ -1,5 +1,6 @@
 package com.arctouch.codechallenge.home;
 
+import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
@@ -12,20 +13,31 @@ import android.widget.TextView;
 import com.arctouch.codechallenge.R;
 import com.arctouch.codechallenge.model.Movie;
 import com.arctouch.codechallenge.util.MovieImageUrlBuilder;
+import com.arctouch.codechallenge.util.RecyclerViewClick;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
-
+    private RecyclerViewClick mRecyclerViewClick;
     private List<Movie> movies;
+
+    public void setRVClick(RecyclerViewClick mRecyclerViewClick) {
+        this.mRecyclerViewClick = mRecyclerViewClick;
+    }
 
     public HomeAdapter(List<Movie> movies) {
         this.movies = movies;
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
+    public Movie getItem(int position){
+        return movies.get(position);
+    }
+
+
+    public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
 
         private final MovieImageUrlBuilder movieImageUrlBuilder = new MovieImageUrlBuilder();
 
@@ -40,6 +52,7 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
             genresTextView = itemView.findViewById(R.id.genresTextView);
             releaseDateTextView = itemView.findViewById(R.id.releaseDateTextView);
             posterImageView = itemView.findViewById(R.id.posterImageView);
+            itemView.setOnClickListener(this);
         }
 
         public void bind(Movie movie) {
@@ -55,6 +68,13 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
                         .into(posterImageView);
             }
         }
+
+        @Override
+        public void onClick(View view) {
+            if(mRecyclerViewClick != null){
+                mRecyclerViewClick.onClickListener(view,getAdapterPosition());
+            }
+        }
     }
 
     @NonNull
@@ -66,6 +86,9 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
 
     @Override
     public int getItemCount() {
+        if(movies == null){
+            return 0;
+        }
         return movies.size();
     }
 
