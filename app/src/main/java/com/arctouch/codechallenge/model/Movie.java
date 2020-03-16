@@ -1,5 +1,6 @@
 package com.arctouch.codechallenge.model;
 
+import com.google.gson.Gson;
 import com.squareup.moshi.Json;
 
 import java.util.List;
@@ -54,17 +55,9 @@ public class Movie {
         return result;
     }
 
-    @Override
-    public String toString() {
-        return "Movie{" +
-                "id=" + id +
-                ", title='" + title + '\'' +
-                ", overview='" + overview + '\'' +
-                ", genres=" + genres +
-                ", genreIds=" + genreIds +
-                ", posterPath='" + posterPath + '\'' +
-                ", backdropPath='" + backdropPath + '\'' +
-                ", releaseDate='" + releaseDate + '\'' +
-                '}';
+
+    public String toJson() {
+        return new Gson().toJson(this);
     }
+
 }
